@@ -1,14 +1,14 @@
 [
 {
-  "modid": "examplemod",
-  "name": "Example Mod",
-  "description": "Example placeholder mod.",
+  "modid": "placemod",
+  "name": "Placemod",
+  "description": "Fast Schematic Spawning System",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",
   "updateUrl": "",
-  "authorList": ["ExampleDude"],
-  "credits": "The Forge and FML guys, for making this example",
+  "authorList": ["Ternsip"],
+  "credits": "Ternsip",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []

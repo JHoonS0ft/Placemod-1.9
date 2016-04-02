@@ -250,7 +250,7 @@ public class Structure {
                 hg = hg == 0 ? 128 : hg;
                 while (hg > 0) {
                     int blockID = Block.getIdFromBlock(world.getBlockState(new BlockPos(wx, hg, wz)).getBlock());
-                    if (overlook[blockID]) {
+                    if (blockID >= 0 && blockID < 256 && overlook[blockID]) {
                         --hg;
                     } else {
                         break;
@@ -260,7 +260,7 @@ public class Structure {
                 squareHeightSum += (hg + 1) * (hg + 1);
                 while (hg > 0) {
                     int blockID = Block.getIdFromBlock(world.getBlockState(new BlockPos(wx, hg, wz)).getBlock());
-                    if (overlook[blockID] || liquid[blockID]) {
+                    if (blockID >= 0 && blockID < 256 && (overlook[blockID] || liquid[blockID])) {
                         --hg;
                     } else {
                         break;
