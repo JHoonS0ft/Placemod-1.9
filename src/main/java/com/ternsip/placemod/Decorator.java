@@ -23,13 +23,14 @@ public class Decorator implements IWorldGenerator {
     public static ArrayList<ArrayList<Structure>> clusters = new ArrayList<ArrayList<Structure>>();
     public static ArrayList<String> names = new ArrayList<String>();
     public static ArrayList<Double> chances = new ArrayList<Double>();
-    private static double density = 0.01; // drop probability per chunk
+    private static double density = 0.005; // drop probability per chunk
     public static boolean[] soil = new boolean[256];
     public static boolean[] overlook = new boolean[256];
     public static boolean[] liquid = new boolean[256];
 
     /* Load/Generate mod settings */
     public static void configure(File file) {
+        new File(file.getParent()).mkdirs();
         Properties config = new Properties();
         if (file.exists()) {
             try {
@@ -141,7 +142,7 @@ public class Decorator implements IWorldGenerator {
 
     @Override
     public void generate(Random randomDefault, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider) {
-        Random random = getRandom(chunkX, chunkZ);
+        Random random = getRandom(world.getSeed(), chunkX, chunkZ);
         int drops = (int) density + (random.nextDouble() <= (density - (int) density) ? 1 : 0);
         for (int i = 0; i < drops; ++i) {
             double pointer = random.nextDouble();
@@ -161,9 +162,9 @@ public class Decorator implements IWorldGenerator {
         }
     }
 
-    public static Random getRandom(int chunkX, int chunkZ) {
+    public static Random getRandom(long seed, int chunkX, int chunkZ) {
         long chunkIndex = (long)chunkX << 32 | chunkZ & 0xFFFFFFFFL;
-        Random random = new Random(chunkIndex);
+        Random random = new Random(chunkIndex ^ seed);
         for (int i = 0; i < 16; ++i) {
             random.nextDouble();
         }
@@ -206,7 +207,7 @@ public class Decorator implements IWorldGenerator {
 
     static {
 
-        configure(new File("Placemod/config.cfg"));
+        configure(new File("config/placemod.cfg"));
 
         soil[Block.getIdFromBlock(Blocks.grass)] = true;
         soil[Block.getIdFromBlock(Blocks.dirt)] = true;

@@ -16,7 +16,7 @@ public class Placemod {
 
     public static final String MODID = "placemod";
     public static final String MODNAME = "Placemod";
-    public static final String VERSION = "1.5";
+    public static final String VERSION = "1.6";
     public static final String AUTHOR = "Ternsip";
     public static final String MCVERSION = "1.9.*";
 

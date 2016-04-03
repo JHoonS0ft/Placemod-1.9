@@ -189,7 +189,12 @@ public class Structure {
                     int rx = blockPos.getX() - startChunkX * 16;
                     int ry = blockPos.getY();
                     int rz = blockPos.getZ() - startChunkZ * 16;
-                    storage[rx / 16][rz / 16][ry / 16].set(rx % 16, ry % 16, rz % 16, state);
+                    ExtendedBlockStorage store = storage[rx / 16][rz / 16][ry / 16];
+                    if (store != null) {
+                        store.set(rx % 16, ry % 16, rz % 16, state);
+                    } else {
+                        world.setBlockState(blockPos, state);
+                    }
                     //world.setBlockState(blockPos, state);
                     //chunk.setModified(true);
                     //world.setBlockState(blockPos, state, 2);
