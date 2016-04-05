@@ -366,7 +366,12 @@ public class Structure {
     }
 
     private BitSet getSkin(short[] blocks) {
-        // Directions 0 - not clipped, 1 - y -> 0, 2 - x -> 0, 4 - x -> max, 8 - z => 0, 16 - z => max
+        final byte Y_INC = 1;
+        final byte Y_DEC = 32;
+        final byte X_INC = 4;
+        final byte X_DEC = 2;
+        final byte Z_INC = 16;
+        final byte Z_DEC = 8;
         int width = flags.getShort("Width");
         int height = flags.getShort("Height");
         int length = flags.getShort("Length");
@@ -386,7 +391,7 @@ public class Structure {
             for (int y = 0; y < height; ++y) {
                 for (int z = 0; z < length; ++z) {
                     int index = dir == 0 ? posture.getIndex(0, y, z) : posture.getIndex(width - 1, y, z);
-                    int flag = dir == 0 ? 2 : 4;
+                    int flag = dir == 0 ? X_INC : X_DEC;
                     if (skinBlocks.contains((int) blocks[index])) {
                         if (!working.get(index)) {
                             indexQueue.add(index);
@@ -398,7 +403,7 @@ public class Structure {
                 }
                 for (int x = 0; x < width; ++x) {
                     int index = dir == 0 ? posture.getIndex(x, y, 0) : posture.getIndex(x, y, length - 1);
-                    int flag = dir == 0 ? 8 : 16;
+                    int flag = dir == 0 ? Z_INC : Z_DEC;
                     if (skinBlocks.contains((int) blocks[index])) {
                         if (!working.get(index)) {
                             indexQueue.add(index);
@@ -410,7 +415,8 @@ public class Structure {
                 }
             }
         }
-        int[] flagsID = {1, 1, 2, 4, 4, 2, 8, 16, 16, 8};
+        byte[] headID = {Y_INC, Y_DEC, X_INC, X_DEC, Z_INC, Z_DEC};
+        byte[] backID = {Y_DEC, Y_INC, X_DEC, X_INC, Z_DEC, Z_INC};
         while (!indexQueue.isEmpty()) {
             int index = indexQueue.remove();
             working.clear(index);
@@ -418,24 +424,49 @@ public class Structure {
             int y = posture.getY(index);
             int z = posture.getZ(index);
             int[] idx = {
+                    posture.getIndex(x, y + 1, z),
                     posture.getIndex(x, y - 1, z),
                     posture.getIndex(x + 1, y, z),
                     posture.getIndex(x - 1, y, z),
                     posture.getIndex(x, y, z + 1),
-                    posture.getIndex(x, y, z - 1)};
-            boolean[] cond = {y > 0, x < width - 1, x > 0, z < length - 1, z > 0};
-            for (int k = 0, fi = 0; k <= 4; ++k, fi += 2) {
+                    posture.getIndex(x, y, z - 1)
+            };
+            boolean[] cond = {
+                    y < height - 1,
+                    y > 0,
+                    x < width - 1,
+                    x > 0,
+                    z < length - 1,
+                    z > 0
+            };
+            for (int k = 0; k < 6; ++k) {
+                int next = idx[k];
                 if (cond[k] &&
-                        (clipped[index] & flagsID[fi]) > 0 &&
-                        (clipped[idx[k]] & flagsID[fi]) == 0 &&
-                        (clipped[idx[k]] & flagsID[fi + 1]) == 0 &&
-                        (skinBlocks.contains((int) blocks[idx[k]]))) {
-                    if (!working.get(idx[k])) {
-                        working.set(idx[k]);
-                        indexQueue.add(idx[k]);
+                        (clipped[index] & headID[k]) > 0 &&
+                        (clipped[next] & headID[k]) == 0 &&
+                        (clipped[next] & backID[k]) == 0 &&
+                        (skinBlocks.contains((int) blocks[next]))) {
+                    if (!working.get(next)) {
+                        working.set(next);
+                        indexQueue.add(next);
                     }
-                    clipped[idx[k]] |= flagsID[fi];
-                    skin.set(idx[k]);
+                    clipped[next] |= headID[k];
+                    skin.set(next);
+                }
+            }
+        }
+        for (int index = 0; index < skin.size(); ++index) {
+            if (skin.get(index)) {
+                int x = posture.getX(index);
+                int y = posture.getY(index);
+                int z = posture.getZ(index);
+                while (y-- > 0) {
+                    int next = posture.getIndex(x, y, z);
+                    if (!skin.get(next) && skinBlocks.contains((int) blocks[next])) {
+                        skin.set(next);
+                    } else {
+                        break;
+                    }
                 }
             }
         }
