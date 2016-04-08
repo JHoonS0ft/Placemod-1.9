@@ -4,9 +4,9 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-public class Biome {
+class Biome {
 
-    public enum Style {
+    enum Style {
 
         COMMON (0x00, "COMMON"),
         SNOW (0x01, "SNOW"),
@@ -15,8 +15,7 @@ public class Biome {
         MUSHROOM (0x04, "MUSHROOM"),
         MESA (0x05, "MESA"),
         END (0x07, "END"),
-        WATER (0x08, "WATER"),
-        NORMAL (0x09, "NORMAL");
+        WATER (0x08, "WATER");
 
         public final int value;
         public final String name;
@@ -37,7 +36,7 @@ public class Biome {
 
     }
 
-    public static Style detect(short[] blocks) {
+    static Style detect(short[] blocks) {
         double[] counts = new double[256];
         for (short blockID : blocks) {
             if (blockID >= 0 && blockID < 256) {
@@ -51,7 +50,7 @@ public class Biome {
             frequency[i] = counts[i] / notAir;
         }
         Block[] snow = new Block[]{Blocks.snow_layer, Blocks.snow, Blocks.ice};
-        Block[] nether = new Block[]{Blocks.netherrack, Blocks.soul_sand, Blocks.nether_brick, Blocks.nether_brick_fence, Blocks.nether_brick_stairs};
+        Block[] nether = new Block[]{Blocks.netherrack, Blocks.soul_sand, Blocks.nether_brick, Blocks.nether_brick_fence, Blocks.nether_brick_stairs, Blocks.obsidian};
         Block[] sand = new Block[]{Blocks.sand, Blocks.sandstone, Blocks.sandstone_stairs};
         Block[] mushroom = new Block[]{Blocks.red_mushroom_block, Blocks.brown_mushroom_block};
         Block[] mesa = new Block[]{Blocks.stained_hardened_clay, Blocks.hardened_clay, Blocks.clay};
@@ -74,7 +73,7 @@ public class Biome {
     }
 
 
-    public static boolean isBiomeSnow(BiomeGenBase biome) {
+    private static boolean isBiomeSnow(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biome.getEnableSnow() ||
                 biomeName.contains("Frozen".toLowerCase()) ||
@@ -90,7 +89,7 @@ public class Biome {
                 biomeName.contains("Glacier".toLowerCase());
     }
 
-    public static boolean isBiomeSand(BiomeGenBase biome) {
+    private static boolean isBiomeSand(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biomeName.contains("Desert".toLowerCase()) ||
                 biomeName.contains("Canyon".toLowerCase()) ||
@@ -101,21 +100,21 @@ public class Biome {
                 biomeName.contains("Xeric".toLowerCase());
     }
 
-    public static boolean isBiomeMesa(BiomeGenBase biome) {
+    private static boolean isBiomeMesa(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biomeName.contains("Mesa".toLowerCase()) ||
                 biomeName.contains("Badlands".toLowerCase()) ||
                 biomeName.contains("LushDesert".toLowerCase());
     }
 
-    public static boolean isBiomeMushroom(BiomeGenBase biome) {
+    private static boolean isBiomeMushroom(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biomeName.contains("Roofed".toLowerCase()) ||
                 biomeName.contains("Mushroom".toLowerCase()) ||
                 biomeName.contains("Fungi".toLowerCase());
     }
 
-    public static boolean isBiomeWater(BiomeGenBase biome) {
+    private static boolean isBiomeWater(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biomeName.contains("Ocean".toLowerCase()) ||
                 biomeName.contains("Coral".toLowerCase()) ||
@@ -124,7 +123,7 @@ public class Biome {
                 biomeName.contains("River".toLowerCase());
     }
 
-    public static boolean isBiomeNether(BiomeGenBase biome) {
+    private static boolean isBiomeNether(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return  biomeName.contains("Hell".toLowerCase()) ||
                 biomeName.contains("Bloody".toLowerCase()) ||
@@ -136,20 +135,20 @@ public class Biome {
                 biomeName.contains("Nether".toLowerCase());
     }
 
-    public static boolean isBiomeEnd(BiomeGenBase biome) {
+    private static boolean isBiomeEnd(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
         return biomeName.contains("TheEnd".toLowerCase());
     }
 
-    public static boolean compare(BiomeGenBase biome, Style style) {
-        return  ((style == Style.SNOW || style == Style.NORMAL) && isBiomeSnow(biome)) ||
-                ((style == Style.SAND || style == Style.NORMAL) && isBiomeSand(biome)) ||
-                ((style == Style.MESA || style == Style.NORMAL) && isBiomeMesa(biome)) ||
-                ((style == Style.MUSHROOM || style == Style.NORMAL) && isBiomeMushroom(biome)) ||
-                ((style == Style.END) && isBiomeEnd(biome)) ||
-                ((style == Style.NETHER) && isBiomeNether(biome)) ||
-                ((style == Style.WATER || style == Style.NORMAL) && isBiomeWater(biome)) ||
-                ((style == Style.COMMON));
+    static Style determine(BiomeGenBase biome) {
+        if (isBiomeEnd(biome)) return Style.END;
+        if (isBiomeNether(biome)) return Style.NETHER;
+        if (isBiomeMesa(biome)) return Style.MESA;
+        if (isBiomeMushroom(biome)) return Style.MUSHROOM;
+        if (isBiomeSand(biome)) return Style.SAND;
+        if (isBiomeSnow(biome)) return Style.SNOW;
+        if (isBiomeWater(biome)) return Style.WATER;
+        return Style.COMMON;
     }
 
 

@@ -10,6 +10,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.WeightedRandomChestContent;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
@@ -71,15 +72,11 @@ public class Structure {
                 flags.getString("Method").equalsIgnoreCase("Underwater")) {
             flags.setInteger("Biome", Biome.Style.WATER.value);
         }
-        if (flags.getString("Method").equalsIgnoreCase("Floating")) {
-            flags.setInteger("Biome", Biome.Style.NORMAL.value);
-        }
         flags.setShort("Width", (short) width);
         flags.setShort("Height", (short) height);
         flags.setShort("Length", (short) length);
         flags.setInteger("Lift", getLift(blocks));
         /* Generate structure over schematic */
-        schematic.merge(flags);
         schematic.setByteArray("Skin", getSkin(blocks).toByteArray());
         /* Save flags */
         flagFile.getParentFile().mkdirs();
@@ -93,7 +90,7 @@ public class Structure {
         fosStruct.close();
     }
 
-    public boolean paste(World world, Posture posture, long seed) throws IOException {
+    boolean paste(World world, Posture posture, long seed) throws IOException {
         long startTime = System.currentTimeMillis();
         int bestY = calibrate(world, posture, seed);
         long calibrateTime = System.currentTimeMillis() - startTime;
@@ -165,7 +162,7 @@ public class Structure {
             for (int cz = 0; cz < sizeChunkZ; ++cz) {
                 Chunk chunk = world.getChunkFromChunkCoords(cx + startChunkX, cz + startChunkZ);
                 for (int sy = 0; sy < 256; sy += 16) {
-                    IBlockState state = chunk.getBlockState(0, sy, 0);
+                    IBlockState state = chunk.getBlockState(new BlockPos(0, sy, 0));
                     chunk.setBlockState(new BlockPos(0, sy, 0), Blocks.log.getDefaultState());
                     chunk.setBlockState(new BlockPos(0, sy, 0), state);
                 }
@@ -195,6 +192,7 @@ public class Structure {
                     } else {
                         world.setBlockState(blockPos, state);
                     }
+                    world.markBlockRangeForRenderUpdate(blockPos, blockPos);
                     //world.setBlockState(blockPos, state);
                     //chunk.setModified(true);
                     //world.setBlockState(blockPos, state, 2);
@@ -238,7 +236,7 @@ public class Structure {
         return true;
     }
 
-    /* Calibrates posture, returns false if can't calibrate */
+    /* Calibrates posture, returns -1 if can't calibrate */
     private int calibrate(World world, Posture posture, long seed) {
         Random random = new Random(seed);
         double totalHeight = 0;
@@ -249,10 +247,12 @@ public class Structure {
         boolean[] liquid = Decorator.liquid;
         int ex = posture.getEndX();
         int ez = posture.getEndZ();
+        String dinName = world.provider.getDimensionType().getName();
+        boolean abnormal = dinName.equalsIgnoreCase("Nether") || dinName.equalsIgnoreCase("End");
+        int startHeight = abnormal ? 64 : 255;
         for (int wx = posture.getPosX(); wx < ex; ++wx) {
             for (int wz = posture.getPosZ(); wz < ez; ++wz) {
-                int hg = world.getHeight(new BlockPos(wx, 0, wz)).getY();
-                hg = hg == 0 ? 128 : hg;
+                int hg = startHeight;
                 while (hg > 0) {
                     int blockID = Block.getIdFromBlock(world.getBlockState(new BlockPos(wx, hg, wz)).getBlock());
                     if (blockID >= 0 && blockID < 256 && overlook[blockID]) {
@@ -297,7 +297,7 @@ public class Structure {
             sy = (int) (averageHeight - Math.sqrt(variance));
         } else {
             if (underwater) {
-                if ((Math.sqrt(varianceWater) > height / 6.0 + 2) || waterHeight < height * 0.75) {
+                if ((Math.sqrt(varianceWater) > height / 2.0 + 2) || (waterHeight + lift < height * 0.35)) {
                     return -1;
                 }
             } else if (!floating && !underground) {
@@ -342,10 +342,11 @@ public class Structure {
         int[][] levelMax = new int[width][length];
         boolean[] liquid = Decorator.liquid;
         boolean[] soil = Decorator.soil;
+        boolean dry = !flags.getString("Method").equalsIgnoreCase("Underwater");
         Posture posture = new Posture(0, 0, 0, 0, 0, 0, false, false, false, width, height, length);
         for (int index = 0; index < blocks.length; ++index) {
             if (blocks[index] >= 0 && blocks[index] < 256) {
-                if (soil[blocks[index]] || liquid[blocks[index]]) {
+                if (soil[blocks[index]] || (dry && liquid[blocks[index]])) {
                     level[posture.getX(index)][posture.getZ(index)] += 1;
                     levelMax[posture.getX(index)][posture.getZ(index)] = posture.getY(index) + 1;
                 }
@@ -424,12 +425,12 @@ public class Structure {
             int y = posture.getY(index);
             int z = posture.getZ(index);
             int[] idx = {
-                    posture.getIndex(x, y + 1, z),
-                    posture.getIndex(x, y - 1, z),
-                    posture.getIndex(x + 1, y, z),
-                    posture.getIndex(x - 1, y, z),
-                    posture.getIndex(x, y, z + 1),
-                    posture.getIndex(x, y, z - 1)
+                posture.getIndex(x, y + 1, z),
+                posture.getIndex(x, y - 1, z),
+                posture.getIndex(x + 1, y, z),
+                posture.getIndex(x - 1, y, z),
+                posture.getIndex(x, y, z + 1),
+                posture.getIndex(x, y, z - 1)
             };
             boolean[] cond = {
                     y < height - 1,

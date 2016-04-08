@@ -6,7 +6,7 @@ import net.minecraft.util.math.BlockPos;
 /**
  * Created by TrnMain on 29.03.2016.
  */
-public class Posture {
+class Posture {
 
     private int posX, posY, posZ;
     private int rotateX, rotateY, rotateZ;
@@ -15,10 +15,10 @@ public class Posture {
     private int sizeX, sizeY, sizeZ;
     private int endX, endY, endZ;
 
-    public Posture(int posX, int posY, int posZ,
-                   int rotateX, int rotateY, int rotateZ,
-                   boolean flipX, boolean flipY, boolean flipZ,
-                   int width, int height, int length) {
+    Posture(int posX, int posY, int posZ,
+            int rotateX, int rotateY, int rotateZ,
+            boolean flipX, boolean flipY, boolean flipZ,
+            int width, int height, int length) {
         this.posX = posX;
         this.posY = posY;
         this.posZ = posZ;
@@ -34,7 +34,7 @@ public class Posture {
         update();
     }
 
-    public void shift(int dx, int dy, int dz) {
+    void shift(int dx, int dy, int dz) {
         this.posX += dx;
         this.posY += dy;
         this.posZ += dz;
@@ -59,7 +59,7 @@ public class Posture {
         this.endZ = posZ + sizeZ;
     }
 
-    public BlockPos getWorldPos(int x, int y, int z) {
+    BlockPos getWorldPos(int x, int y, int z) {
         int wx = flipX ? width - x - 1 : x;
         int wy = flipY ? height - y - 1 : y;
         int wz = flipZ ? length - z - 1 : z;
@@ -72,7 +72,7 @@ public class Posture {
         return new BlockPos(wx + posX, wy + posY, wz + posZ);
     }
 
-    public int getWorldMeta(Block block, byte meta) {
+    int getWorldMeta(Block block, byte meta) {
         Directions.BlockType blockType = Directions.getBlockType(block, meta);
         int mask = Directions.getMask(blockType);
         int overlap = (meta & mask) ^ meta;
@@ -100,107 +100,107 @@ public class Posture {
         return meta | overlap;
     }
 
-    public int getPosX() {
+    int getPosX() {
         return posX;
     }
 
-    public int getPosY() {
+    int getPosY() {
         return posY;
     }
 
-    public int getPosZ() {
+    int getPosZ() {
         return posZ;
     }
 
-    public int getRotateX() {
+    int getRotateX() {
         return rotateX;
     }
 
-    public int getRotateY() {
+    int getRotateY() {
         return rotateY;
     }
 
-    public int getRotateZ() {
+    int getRotateZ() {
         return rotateZ;
     }
 
-    public boolean isFlipX() {
+    boolean isFlipX() {
         return flipX;
     }
 
-    public boolean isFlipY() {
+    boolean isFlipY() {
         return flipY;
     }
 
-    public boolean isFlipZ() {
+    boolean isFlipZ() {
         return flipZ;
     }
 
-    public int getWidth() {
+    int getWidth() {
         return width;
     }
 
-    public int getHeight() {
+    int getHeight() {
         return height;
     }
 
-    public int getLength() {
+    int getLength() {
         return length;
     }
 
-    public int getSizeX() {
+    int getSizeX() {
         return sizeX;
     }
 
-    public int getSizeY() {
+    int getSizeY() {
         return sizeY;
     }
 
-    public int getSizeZ() {
+    int getSizeZ() {
         return sizeZ;
     }
 
-    public int getEndX() {
+    int getEndX() {
         return endX;
     }
 
-    public int getEndY() {
+    int getEndY() {
         return endY;
     }
 
-    public int getEndZ() {
+    int getEndZ() {
         return endZ;
     }
 
-    public int getIndex(int x, int y, int z) {
+    int getIndex(int x, int y, int z) {
         return x + y * width * length + z * width;
     }
 
-    public int getX(int index) {
+    int getX(int index) {
         return index % width;
     }
 
-    public int getY(int index) {
+    int getY(int index) {
         return index / (width * length);
     }
 
-    public int getZ(int index) {
+    int getZ(int index) {
         return (index / width) % length;
     }
 
-    public int getStartChunkX() {
+    int getStartChunkX() {
         return posX / 16 + (posX < 0 ? -1 : 0);
     }
 
-    public int getStartChunkZ() {
+    int getStartChunkZ() {
         return posZ / 16 + (posZ < 0 ? -1 : 0);
     }
 
-    public int getEndChunkX() {
+    int getEndChunkX() {
         return getEndX() / 16 + (getEndX() < 0 ? -1 : 0);
     }
 
-    public int getEndChunkZ() {
+    int getEndChunkZ() {
         return getEndZ() / 16 + (getEndZ() < 0 ? -1 : 0);
     }
 

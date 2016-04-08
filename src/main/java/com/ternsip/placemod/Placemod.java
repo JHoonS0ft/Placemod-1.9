@@ -14,9 +14,9 @@ import net.minecraftforge.fml.common.registry.GameRegistry;
         acceptableRemoteVersions = "*")
 public class Placemod {
 
-    public static final String MODID = "placemod";
-    public static final String MODNAME = "Placemod";
-    public static final String VERSION = "1.7";
+    static final String MODID = "placemod";
+    static final String MODNAME = "Placemod";
+    static final String VERSION = "2.1";
     public static final String AUTHOR = "Ternsip";
     public static final String MCVERSION = "1.9.*";
 

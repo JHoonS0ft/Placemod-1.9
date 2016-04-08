@@ -18,25 +18,21 @@ http://minecraft.curseforge.com/projects/placemod
 
 
 Changelog:
-
 World structure generator highly optimized since 1.4 version.
-
 Added precalulating structure flags and skin.
-
 Spawn system nicely simplified.
-
 Fixed Block ID bug (gave ArrayIndexOutOfBounds Exception when you tried to run with other mods.).
-
 Fixed mod version.
-
 Fixed random world seed dependence.
-
 Relocated configuration file, now config locates in config/placemod.cfg.
-
 Fixed null pointer exception rises when world won't generate chunk.
-
 Changed spawn rarity to 0.005.
-
 Improved structure skinning. 
+Version 2.1 Major Update:
+Assigned individual cluster/structure  rarity for each biome type.
+Add saturation function ratios to config.
+Fixed bug that makes block not rendered when large structures spawns.
+Fixed nether spawn height (Before nether was not able to spawn structures properly - only on top of hell).
+Fixed underwater structures lifting.
 
 

@@ -89,7 +89,7 @@ public class Directions {
         return BlockType.IDLE;
     }
 
-    public static Integer getDirection(int meta, BlockType blockType) {
+    static Integer getDirection(int meta, BlockType blockType) {
         if (metaToDirection.containsKey(blockType)) {
             HashMap<Integer, Integer> metaToDir = metaToDirection.get(blockType);
             if (metaToDir.containsKey(meta)) {
@@ -99,7 +99,7 @@ public class Directions {
         return UNKNOWN;
     }
 
-    public static Integer getMeta(int defaultMeta, int direction, BlockType blockType) {
+    static Integer getMeta(int defaultMeta, int direction, BlockType blockType) {
         if (directionToMeta.containsKey(blockType)) {
             HashMap<Integer, Integer> biMap = directionToMeta.get(blockType);
             if (biMap.containsKey(direction)) {
@@ -109,7 +109,7 @@ public class Directions {
         return defaultMeta;
     }
 
-    public static int getMask(BlockType blockType) {
+    static int getMask(BlockType blockType) {
         return masks.containsKey(blockType) ? masks.get(blockType) : 0;
     }
 

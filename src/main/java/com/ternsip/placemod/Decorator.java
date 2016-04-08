@@ -20,16 +20,15 @@ import java.util.*;
 /* This class statically loads blueprints and mod configuration and override generate method @author Ternsip */
 public class Decorator implements IWorldGenerator {
 
-    public static ArrayList<ArrayList<Structure>> clusters = new ArrayList<ArrayList<Structure>>();
-    public static ArrayList<String> names = new ArrayList<String>();
-    public static ArrayList<Double> chances = new ArrayList<Double>();
+    private static Distributor distributor = null;
     private static double density = 0.005; // drop probability per chunk
-    public static boolean[] soil = new boolean[256];
-    public static boolean[] overlook = new boolean[256];
-    public static boolean[] liquid = new boolean[256];
+    static double ratioA = 1, ratioB = 0.5;
+    static boolean[] soil = new boolean[256];
+    static boolean[] overlook = new boolean[256];
+    static boolean[] liquid = new boolean[256];
 
     /* Load/Generate mod settings */
-    public static void configure(File file) {
+    private static void configure(File file) {
         new File(file.getParent()).mkdirs();
         Properties config = new Properties();
         if (file.exists()) {
@@ -37,19 +36,22 @@ public class Decorator implements IWorldGenerator {
                 FileInputStream fis = new FileInputStream(file);
                 config.load(fis);
                 density = Double.parseDouble(config.getProperty("DENSITY", Double.toString(density)));
+                ratioA = Double.parseDouble(config.getProperty("RATIO_A", Double.toString(ratioA)));
+                ratioB = Double.parseDouble(config.getProperty("RATIO_B", Double.toString(ratioB)));
                 fis.close();
             } catch (IOException ioe) {
                 ioe.printStackTrace();
             }
-        } else {
-            try {
-                FileOutputStream fos = new FileOutputStream(file);
-                config.setProperty("DENSITY", Double.toString(density));
-                config.store(fos, null);
-                fos.close();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(file);
+            config.setProperty("DENSITY", Double.toString(density));
+            config.setProperty("RATIO_A", Double.toString(ratioA));
+            config.setProperty("RATIO_B", Double.toString(ratioB));
+            config.store(fos, null);
+            fos.close();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
     }
 
@@ -58,9 +60,9 @@ public class Decorator implements IWorldGenerator {
         System.out.print("[PLACEMOD] LOADING SCHEMATICS FROM " + folder.getPath() + "\n");
         Stack<File> folders = new Stack<File>();
         folders.add(folder);
-        HashMap<String, ArrayList<Structure>> villages = new HashMap<String, ArrayList<Structure>>();
-        long totalBlocks = 0;
-        int totalLoaded = 0;
+        ArrayList<Cluster> clusters = new ArrayList<Cluster>();
+        HashMap<String, Cluster> villages = new HashMap<String, Cluster>();
+        int loaded = 0;
         while (!folders.empty()) {
             File dir = folders.pop();
             File[] listOfFiles = dir.listFiles();
@@ -71,28 +73,22 @@ public class Decorator implements IWorldGenerator {
                         String pathFlags = pathParallel.replace(".schematic", ".flags");
                         String pathStructure = pathParallel.replace(".schematic", ".structure");
                         final Structure structure = new Structure(file, new File(pathFlags), new File(pathStructure));
-                        int width = structure.flags.getShort("Width");
-                        int height = structure.flags.getShort("Height");
-                        int length = structure.flags.getShort("Length");
-                        totalBlocks += width * height * length;
-                        totalLoaded++;
+                        loaded++;
                         if (structure.flags.getString("Method").equalsIgnoreCase("Village")) {
                             if (villages.containsKey(file.getParent())) {
                                 villages.get(file.getParent()).add(structure);
                             } else {
-                                villages.put(file.getParent(), new ArrayList<Structure>() {{
-                                    add(structure);
-                                }});
+                                villages.put(file.getParent(), new Cluster(structure));
                             }
                         } else {
-                            clusters.add(new ArrayList<Structure>() {{
-                                add(structure);
-                            }});
+                            clusters.add(new Cluster(structure));
                         }
                         String info =
                             "[PLACEMOD]" +
                             " LOAD " + file.getPath() +
-                            "; SIZE = [W=" + width + ";H=" + height + ";L=" + length + "]" +
+                            "; SIZE = [W=" + structure.flags.getShort("Width") +
+                                    ";H=" + structure.flags.getShort("Height") +
+                                    ";L=" + structure.flags.getShort("Length") + "]" +
                             "; LIFT = " + structure.flags.getInteger("Lift") +
                             "; METHOD = " + structure.flags.getString("Method") +
                             "; BIOME = " + Biome.Style.valueOf(structure.flags.getInteger("Biome")).name;
@@ -109,60 +105,38 @@ public class Decorator implements IWorldGenerator {
                 }
             }
         }
-        for (ArrayList<Structure> structure : villages.values()) {
-            clusters.add(structure);
-        }
-        double averageBlocks = totalBlocks / clusters.size();
-        double chancesSum = 0;
-        for (ArrayList<Structure> cluster : clusters) {
-            long weight = 0;
-            for (Structure structure : cluster) {
-                int width = structure.flags.getShort("Width");
-                int height = structure.flags.getShort("Height");
-                int length = structure.flags.getShort("Length");
-                weight += width * height * length;
-            }
-            // f(x) = 2/(1+e^(-x^0.5))-1
-            double saturation = 2.0 / (1.0 + Math.exp(-Math.pow(weight / averageBlocks, 0.5))) - 1.0;
-            double chance = 1.0 - saturation;
-            chances.add(chance);
-            chancesSum += chance;
-        }
-        for (int i = 0; i < chances.size(); ++i) {
-            chances.set(i, chances.get(i) / chancesSum);
-        }
+        clusters.addAll(villages.values());
+        distributor = new Distributor(clusters);
         long loadTime = (System.currentTimeMillis() - startTime);
         String info =
             "[PLACEMOD]" +
             "  SUCCESSFULLY LOADED CLUSTERS " + clusters.size() +
-            "; SCHEMATICS = " + totalLoaded +
+            "; SCHEMATICS = " + loaded +
             "; LOAD TIME = " + new DecimalFormat("###0.00").format(loadTime / 1000.0) + "s";
         System.out.print(info + "\n");
     }
+
 
     @Override
     public void generate(Random randomDefault, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider) {
         Random random = getRandom(world.getSeed(), chunkX, chunkZ);
         int drops = (int) density + (random.nextDouble() <= (density - (int) density) ? 1 : 0);
+        BiomeGenBase biome = world.getBiomeGenForCoords(new BlockPos(chunkX * 16, 64, chunkZ * 16));
+        Biome.Style biomeStyle = Biome.determine(biome);
+        ArrayList<Cluster> biomeClusters = distributor.getClusters(biomeStyle);
         for (int i = 0; i < drops; ++i) {
             double pointer = random.nextDouble();
-            for (int j = 0; j < chances.size(); ++j) {
-                if (pointer <= chances.get(j)) {
-                    BiomeGenBase biome = world.getBiomeGenForCoords(new BlockPos(chunkX * 16, 64, chunkZ * 16));
-                    for (Structure structure : clusters.get(j)) {
-                        if (Biome.compare(biome, Biome.Style.valueOf(structure.flags.getInteger("Biome")))) {
-                            place(world, clusters.get(j), chunkX, chunkZ, random.nextLong());
-                            break;
-                        }
-                    }
+            for (Cluster cluster : biomeClusters) {
+                if (pointer <= cluster.getChance()) {
+                    place(world, cluster, chunkX, chunkZ, random.nextLong());
                     break;
                 }
-                pointer -= chances.get(j);
+                pointer -= cluster.getChance();
             }
         }
     }
 
-    public static Random getRandom(long seed, int chunkX, int chunkZ) {
+    private static Random getRandom(long seed, int chunkX, int chunkZ) {
         long chunkIndex = (long)chunkX << 32 | chunkZ & 0xFFFFFFFFL;
         Random random = new Random(chunkIndex ^ seed);
         for (int i = 0; i < 16; ++i) {
@@ -171,10 +145,10 @@ public class Decorator implements IWorldGenerator {
         return random;
     }
 
-    public void place(World world, ArrayList<Structure> cluster, int chunkX, int chunkZ, long seed) {
+    private void place(World world, Cluster cluster, int chunkX, int chunkZ, long seed) {
         Random random = new Random(seed);
         int structureBound = 1;
-        for (Structure structure : cluster) {
+        for (Structure structure : cluster.getStructures()) {
             int width = structure.flags.getShort("Width");
             int length = structure.flags.getShort("Length");
             structureBound = Math.max(structureBound, Math.max(width, length));
@@ -184,7 +158,7 @@ public class Decorator implements IWorldGenerator {
         int nx = 0, nz = 0;
         int cx = chunkX * 16 + Math.abs(random.nextInt()) % 16;
         int cz = chunkZ * 16 + Math.abs(random.nextInt()) % 16;
-        for (Structure structure : cluster) {
+        for (Structure structure : cluster.getStructures()) {
             Posture posture = new Posture(0, 0, 0,
                     0, random.nextInt() % 4, 0,
                     random.nextBoolean(), false, random.nextBoolean(),
