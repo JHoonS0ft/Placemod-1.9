@@ -18,6 +18,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.storage.loot.LootTableList;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.fml.common.registry.VillagerRegistry;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -216,7 +217,7 @@ public class Structure {
                 if (!world.isAirBlock(new BlockPos(xPos, yPos, zPos)) || !world.isAirBlock(new BlockPos(xPos, yPos + 1, zPos))) {
                     continue;
                 }
-                EntityVillager villager = new EntityVillager(world, random.nextInt() % 5);
+                EntityVillager villager = new EntityVillager(world, Math.abs(random.nextInt()) % 5);
                 float facing = MathHelper.wrapAngleTo180_float(random.nextFloat() * 360.0F);
                 villager.setLocationAndAngles(xPos + 0.5, yPos + 0.1, zPos + 0.5, facing, 0.0F);
                 world.spawnEntityInWorld(villager);
@@ -289,7 +290,7 @@ public class Structure {
         boolean underwater = flags.getString("Method").equalsIgnoreCase("Underwater");
         boolean floating = flags.getString("Method").equalsIgnoreCase("Floating");
         boolean underground = flags.getString("Method").equalsIgnoreCase("Underground");
-        int sy;
+         int sy;
         if (water) {
             if (Math.sqrt(variance) > 3.0 || waterHeight < 6.0) {
                 return -1;
