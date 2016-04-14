@@ -21,7 +21,7 @@ class Distributor {
                 }
             }
             for (Integer biomeStyle : biomeStyles) {
-                final Cluster newCluster = new Cluster(cluster.getStructures());
+                final Cluster newCluster = new Cluster(cluster);
                 if (biomesClusters.containsKey(biomeStyle)) {
                     biomesClusters.get(biomeStyle).add(newCluster);
                 } else {

@@ -57,7 +57,7 @@ public class Decorator implements IWorldGenerator {
 
     private static void loadStructures(File folder) {
         long startTime = System.currentTimeMillis();
-        System.out.print("[PLACEMOD] LOADING SCHEMATICS FROM " + folder.getPath() + "\n");
+        new Report().add("LOADING SCHEMATICS FROM", folder.getPath()).print();
         Stack<File> folders = new Stack<File>();
         folders.add(folder);
         ArrayList<Cluster> clusters = new ArrayList<Cluster>();
@@ -74,31 +74,31 @@ public class Decorator implements IWorldGenerator {
                         String pathStructure = pathParallel.replace(".schematic", ".structure");
                         final Structure structure = new Structure(file, new File(pathFlags), new File(pathStructure));
                         loaded++;
+                        String parent = file.getParent();
                         if (structure.flags.getString("Method").equalsIgnoreCase("Village")) {
-                            if (villages.containsKey(file.getParent())) {
-                                villages.get(file.getParent()).add(structure);
+                            if (villages.containsKey(parent)) {
+                                villages.get(parent).add(structure);
                             } else {
-                                villages.put(file.getParent(), new Cluster(structure));
+                                villages.put(parent, new Cluster(parent).add(structure));
                             }
                         } else {
-                            clusters.add(new Cluster(structure));
+                            clusters.add(new Cluster(parent).add(structure));
                         }
-                        String info =
-                            "[PLACEMOD]" +
-                            " LOAD " + file.getPath() +
-                            "; SIZE = [W=" + structure.flags.getShort("Width") +
-                                    ";H=" + structure.flags.getShort("Height") +
-                                    ";L=" + structure.flags.getShort("Length") + "]" +
-                            "; LIFT = " + structure.flags.getInteger("Lift") +
-                            "; METHOD = " + structure.flags.getString("Method") +
-                            "; BIOME = " + Biome.Style.valueOf(structure.flags.getInteger("Biome")).name;
-                        System.out.print(info + "\n");
+                        int width = structure.flags.getShort("Width");
+                        int height = structure.flags.getShort("Height");
+                        int length = structure.flags.getShort("Length");
+                        new Report()
+                                .add("LOAD", file.getPath())
+                                .add("SIZE", "[W=" + width + ";H=" + height + ";L=" + length + "]")
+                                .add("LIFT", String.valueOf(structure.flags.getInteger("Lift")))
+                                .add("METHOD", structure.flags.getString("Method"))
+                                .add("BIOME", Biome.Style.valueOf(structure.flags.getInteger("Biome")).name)
+                                .print();
                     } catch (IOException ioe) {
-                        String info =
-                            "[PLACEMOD]" +
-                            " CAN'T LOAD SCHEMATIC " + file.getPath() +
-                            "; ERROR = " + ioe.getMessage();
-                        System.out.print(info + "\n");
+                        new Report()
+                                .add("CAN'T LOAD SCHEMATIC", file.getPath())
+                                .add("ERROR", ioe.getMessage())
+                                .print();
                     }
                 } else if (file.isDirectory()) {
                     folders.add(file);
@@ -108,12 +108,11 @@ public class Decorator implements IWorldGenerator {
         clusters.addAll(villages.values());
         distributor = new Distributor(clusters);
         long loadTime = (System.currentTimeMillis() - startTime);
-        String info =
-            "[PLACEMOD]" +
-            "  SUCCESSFULLY LOADED CLUSTERS " + clusters.size() +
-            "; SCHEMATICS = " + loaded +
-            "; LOAD TIME = " + new DecimalFormat("###0.00").format(loadTime / 1000.0) + "s";
-        System.out.print(info + "\n");
+        new Report()
+                .add("LOADED CLUSTERS", String.valueOf(clusters.size()))
+                .add("LOADED SCHEMATICS", String.valueOf(loaded))
+                .add("LOAD TIME", new DecimalFormat("###0.00").format(loadTime / 1000.0) + "s")
+                .print();
     }
 
 
@@ -147,34 +146,58 @@ public class Decorator implements IWorldGenerator {
 
     private void place(World world, Cluster cluster, int chunkX, int chunkZ, long seed) {
         Random random = new Random(seed);
-        int structureBound = 1;
-        for (Structure structure : cluster.getStructures()) {
-            int width = structure.flags.getShort("Width");
-            int length = structure.flags.getShort("Length");
-            structureBound = Math.max(structureBound, Math.max(width, length));
-        }
-        int clusterRoad = -2 + structureBound / 8;
-        int dir = 0;
-        int nx = 0, nz = 0;
         int cx = chunkX * 16 + Math.abs(random.nextInt()) % 16;
         int cz = chunkZ * 16 + Math.abs(random.nextInt()) % 16;
-        for (Structure structure : cluster.getStructures()) {
-            Posture posture = new Posture(0, 0, 0,
-                    0, random.nextInt() % 4, 0,
-                    random.nextBoolean(), false, random.nextBoolean(),
-                    structure.flags.getShort("Width"),
-                    structure.flags.getShort("Height"),
-                    structure.flags.getShort("Length"));
-            int sx = cx + nx * (clusterRoad + structureBound) - (posture.getPosX() / 2);
-            int sz = cz + nz * (clusterRoad + structureBound) - (posture.getPosZ() / 2);
+        new Report()
+                .add("PLACE CLUSTER", cluster.getName())
+                .add("POS", "[CHUNK_X=" + chunkX + ";CHUNK_Z=" + chunkZ + "]")
+                .add("SIZE", String.valueOf(cluster.getStructures().size()))
+                .print();
+        int curX = cx, curZ = cz, maxZ = 0;
+        int timer = 0, delay = (int) Math.ceil(Math.sqrt(cluster.getStructures().size()));
+        ArrayList<Structure> structures = new ArrayList<Structure>(cluster.getStructures());
+        Collections.shuffle(structures, random);
+        for (Structure structure : structures) {
+            int rotX = 0, rotY = random.nextInt() % 4, rotZ = 0;
+            boolean flipX = random.nextBoolean(), flipY = false, flipZ = random.nextBoolean();
+            int width = structure.flags.getShort("Width");
+            int height = structure.flags.getShort("Height");
+            int length = structure.flags.getShort("Length");
+            Posture posture = new Posture(0, 0, 0, rotX, rotY, rotZ, flipX, flipY, flipZ, width, height, length);
+            if (--timer <= 0) {
+                timer = delay;
+                curX = cx;
+                curZ += maxZ;
+                maxZ = 0;
+            }
+            int sx = curX;
+            int sz = curZ;
+            curX += posture.getSizeX() + 1;
+            maxZ = Math.max(maxZ, posture.getSizeZ());
             posture.shift(sx, 0, sz);
             try {
+                long startTime = System.currentTimeMillis();
+                posture.shift(0, structure.calibrate(world, posture, seed), 0);
                 structure.paste(world, posture, random.nextLong());
-                nz += dir == 0 ? -1 : (dir == 2 ? 1 : 0);
-                nx += dir == 1 ? 1 : (dir == 3 ? -1 : 0);
-                dir = (dir == 0 ? (nx == nz + 1) : (Math.abs(nx) == Math.abs(nz))) ? (dir + 1) % 4 : dir;
-            } catch (IOException iae) {
-                System.out.print("CAN'T PLACE STRUCTURE: " + iae.getMessage() + "\n");
+                long spawnTime = System.currentTimeMillis() - startTime;
+                new Report()
+                        .add("PASTED", structure.schematicFile.getPath())
+                        .add("SPAWN TIME", new DecimalFormat("###0.00").format(spawnTime / 1000.0) + "s")
+                        .add("POS", "[X=" + posture.getPosX() + ";Y=" + posture.getPosY() + ";Z=" + posture.getPosZ() + "]")
+                        .add("SIZE", "[W=" + width + ";H=" + height + ";L=" + length + "]")
+                        .add("BIOME", Biome.Style.valueOf(structure.flags.getInteger("Biome")).name)
+                        .add("ROTATE", "[X=" + posture.getRotateX() + ";Y=" + posture.getRotateY() + ";Z=" + posture.getRotateZ() + "]")
+                        .add("FLIP", "[X=" + posture.isFlipX() + ";Y=" + posture.isFlipY() + ";Z=" + posture.isFlipZ() + "]")
+                        .print();
+            } catch (IOException ioe) {
+                new Report().add("CAN'T PASTE", structure.schematicFile.getPath())
+                        .add("ERROR",  ioe.getMessage())
+                        .add("POS", "[X=" + posture.getPosX() + ";Y=" + posture.getPosY() + ";Z=" + posture.getPosZ() + "]")
+                        .add("SIZE", "[W=" + width + ";H=" + height + ";L=" + length + "]")
+                        .add("BIOME", Biome.Style.valueOf(structure.flags.getInteger("Biome")).name)
+                        .add("ROTATE", "[X=" + posture.getRotateX() + ";Y=" + posture.getRotateY() + ";Z=" + posture.getRotateZ() + "]")
+                        .add("FLIP", "[X=" + posture.isFlipX() + ";Y=" + posture.isFlipY() + ";Z=" + posture.isFlipZ() + "]")
+                        .print();
             }
         }
     }

@@ -8,18 +8,27 @@ import java.util.ArrayList;
 class Cluster {
 
     private double chance = 0;
+    private String name = "";
     private ArrayList<Structure> structures = new ArrayList<Structure>();
 
-    Cluster(ArrayList<Structure> structures) {
-        this.structures = structures;
+    public Cluster(String name) {
+        this.name = name;
     }
 
-    Cluster(Structure structure) {
-        add(structure);
+    public Cluster(Cluster cluster) {
+        this.chance = cluster.getChance();
+        this.name = cluster.getName();
+        this.structures.addAll(cluster.getStructures());
     }
 
-    public void add(Structure structure) {
+    public Cluster add(Structure structure) {
         structures.add(structure);
+        return this;
+    }
+
+    public Cluster add(ArrayList<Structure> structures) {
+        this.structures.addAll(structures);
+        return this;
     }
 
     void setChance(double chance) {
@@ -30,7 +39,12 @@ class Cluster {
         return chance;
     }
 
+    public String getName() {
+        return name;
+    }
+
     ArrayList<Structure> getStructures() {
         return structures;
     }
+
 }

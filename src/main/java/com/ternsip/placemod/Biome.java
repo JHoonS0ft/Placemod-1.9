@@ -31,7 +31,7 @@ class Biome {
                     return sample;
                 }
             }
-            return null;
+            return COMMON;
         }
 
     }

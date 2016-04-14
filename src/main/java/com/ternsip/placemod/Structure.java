@@ -34,7 +34,6 @@ public class Structure {
     public File flagFile = null;
     public File structureFile = null;
 
-
     public Structure(File schematicFile, File flagFile, File structureFile) throws IOException {
         /* Load structure if it exists */
         this.schematicFile = schematicFile;
@@ -92,25 +91,6 @@ public class Structure {
     }
 
     boolean paste(World world, Posture posture, long seed) throws IOException {
-        long startTime = System.currentTimeMillis();
-        int bestY = calibrate(world, posture, seed);
-        long calibrateTime = System.currentTimeMillis() - startTime;
-        if (bestY < 4 || bestY > 250) {
-            return false;
-        }
-        posture.shift(0, bestY, 0);
-        {
-            String info = "[PLACEMOD]" +
-                    " START PASTE " + schematicFile.getName() +
-                    "; SIZE = [W=" + posture.getWidth() + ";H=" + posture.getHeight() + ";L=" + posture.getLength() + "]" +
-                    "; METHOD = " + flags.getString("Method") +
-                    "; POS = [X=" + posture.getPosX() + ";Y=" + posture.getPosY() + ";Z=" + posture.getPosZ() + "]" +
-                    "; ROTATE = [X=" + posture.getRotateX() + ";Y=" + posture.getRotateY() + ";Z=" + posture.getRotateZ() + "]" +
-                    "; FLIP = [X=" + posture.isFlipX() + ";Y=" + posture.isFlipY() + ";Z=" + posture.isFlipZ() + "]" +
-                    "; BIOME = " + Biome.Style.valueOf(flags.getInteger("Biome")).name +
-                    "; CALIBRATE TIME = " + new DecimalFormat("###0.00").format(calibrateTime / 1000.0) + "s";
-            System.out.print(info + "\n");
-        }
         /* Load ad paste structure */
         NBTTagCompound structure;
         FileInputStream fis = new FileInputStream(structureFile);
@@ -148,7 +128,6 @@ public class Structure {
         if (flags.getString("Biome").equalsIgnoreCase("End")) {
             lootTables.add(LootTableList.CHESTS_END_CITY_TREASURE);
         }
-        long loadTime = System.currentTimeMillis() - startTime - calibrateTime;
         /* Paste */
         int width = posture.getWidth();
         int height = posture.getHeight();
@@ -193,7 +172,7 @@ public class Structure {
                     } else {
                         world.setBlockState(blockPos, state);
                     }
-                    world.markBlockRangeForRenderUpdate(blockPos, blockPos);
+                    //world.markBlockRangeForRenderUpdate(blockPos, blockPos);
                     //world.setBlockState(blockPos, state);
                     //chunk.setModified(true);
                     //world.setBlockState(blockPos, state, 2);
@@ -206,14 +185,15 @@ public class Structure {
                 }
             }
         }
+        world.markBlockRangeForRenderUpdate(posture.getWorldPos(0, 0, 0), posture.getWorldPos(width, height, length));
         /* Populate */
         if (flags.getString("Method").equalsIgnoreCase("Village")) {
             int count = (int) (1 + Math.cbrt(Math.abs(posture.getWidth() * posture.getLength()))) / 2;
             int maxTries = 16 + count * count;
             for (int i = 0; i < maxTries && count > 0; ++i) {
-                int xPos = posture.getPosX() + random.nextInt() % posture.getSizeX();
-                int yPos = posture.getPosY() + random.nextInt() % posture.getSizeY();
-                int zPos = posture.getPosZ() + random.nextInt() % posture.getSizeZ();
+                int xPos = posture.getPosX() + Math.abs(random.nextInt()) % posture.getSizeX();
+                int yPos = posture.getPosY() + Math.abs(random.nextInt()) % posture.getSizeY();
+                int zPos = posture.getPosZ() + Math.abs(random.nextInt()) % posture.getSizeZ();
                 if (!world.isAirBlock(new BlockPos(xPos, yPos, zPos)) || !world.isAirBlock(new BlockPos(xPos, yPos + 1, zPos))) {
                     continue;
                 }
@@ -226,19 +206,11 @@ public class Structure {
             }
         }
         /* Spawn entities */
-        long spawnTime = System.currentTimeMillis() - startTime - calibrateTime - loadTime;
-        {
-            String info = "[PLACEMOD]" +
-                    " END PASTE " + schematicFile.getPath() +
-                    "; LOAD TIME = " + new DecimalFormat("###0.00").format(loadTime / 1000.0) + "s" +
-                    "; SPAWN TIME = " + new DecimalFormat("###0.00").format(spawnTime / 1000.0) + "s";
-            System.out.print(info + "\n");
-        }
         return true;
     }
 
     /* Calibrates posture, returns -1 if can't calibrate */
-    private int calibrate(World world, Posture posture, long seed) {
+    public int calibrate(World world, Posture posture, long seed) throws IOException {
         Random random = new Random(seed);
         double totalHeight = 0;
         double squareHeightSum = 0;
@@ -293,17 +265,17 @@ public class Structure {
          int sy;
         if (water) {
             if (Math.sqrt(variance) > 3.0 || waterHeight < 6.0) {
-                return -1;
+                throw new IOException("Rough water");
             }
             sy = (int) (averageHeight - Math.sqrt(variance));
         } else {
             if (underwater) {
                 if ((Math.sqrt(varianceWater) > height / 2.0 + 2) || (waterHeight + lift < height * 0.35)) {
-                    return -1;
+                    throw new IOException("Rough bottom");
                 }
             } else if (!floating && !underground) {
                 if ((Math.sqrt(varianceWater) > height / 8.0 + 2) || waterHeight > 1.5) {
-                    return -1;
+                    throw new IOException("Rough area");
                 }
             }
             sy = (int) (averageHeightWater - Math.sqrt(varianceWater));
@@ -314,6 +286,9 @@ public class Structure {
             sy = 30 + random.nextInt() % 25;
         } else {
             sy -= lift;
+        }
+        if (sy < 4 || sy > 250) {
+            throw new IOException("Abnormal height");
         }
         return sy;
     }
