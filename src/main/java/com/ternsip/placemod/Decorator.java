@@ -23,6 +23,7 @@ public class Decorator implements IWorldGenerator {
     private static Distributor distributor = null;
     private static double density = 0.005; // drop probability per chunk
     static double ratioA = 1, ratioB = 0.5;
+    static boolean strictMode = false;
     static boolean[] soil = new boolean[256];
     static boolean[] overlook = new boolean[256];
     static boolean[] liquid = new boolean[256];
@@ -38,6 +39,7 @@ public class Decorator implements IWorldGenerator {
                 density = Double.parseDouble(config.getProperty("DENSITY", Double.toString(density)));
                 ratioA = Double.parseDouble(config.getProperty("RATIO_A", Double.toString(ratioA)));
                 ratioB = Double.parseDouble(config.getProperty("RATIO_B", Double.toString(ratioB)));
+                strictMode = Boolean.parseBoolean(config.getProperty("STRICT_MODE", Boolean.toString(strictMode)));
                 fis.close();
             } catch (IOException ioe) {
                 ioe.printStackTrace();
@@ -48,6 +50,7 @@ public class Decorator implements IWorldGenerator {
             config.setProperty("DENSITY", Double.toString(density));
             config.setProperty("RATIO_A", Double.toString(ratioA));
             config.setProperty("RATIO_B", Double.toString(ratioB));
+            config.setProperty("STRICT_MODE", Boolean.toString(strictMode));
             config.store(fos, null);
             fos.close();
         } catch (IOException ioe) {

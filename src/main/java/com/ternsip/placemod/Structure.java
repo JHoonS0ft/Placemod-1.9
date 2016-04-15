@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
 
+/* Holds schematic-extended information and can load/spawn/calibrate it */
 public class Structure {
 
     public NBTTagCompound flags = new NBTTagCompound();
@@ -35,6 +36,7 @@ public class Structure {
     public File structureFile = null;
 
     public Structure(File schematicFile, File flagFile, File structureFile) throws IOException {
+
         /* Load structure if it exists */
         this.schematicFile = schematicFile;
         this.flagFile = flagFile;
@@ -45,20 +47,28 @@ public class Structure {
             fis.close();
             return;
         }
+
         /* Load schematic */
         FileInputStream fis = new FileInputStream(schematicFile);
         NBTTagCompound schematic = CompressedStreamTools.readCompressed(fis);
         fis.close();
         String materials =  schematic.getString("Materials");
-        if (!materials.equals("Alpha")) throw new IOException("Schematic is not an Alpha material");
+        if (!materials.equals("Alpha")) {
+            throw new IOException("Material of schematic is not an alpha");
+        }
         int width = schematic.getShort("Width");
         int height = schematic.getShort("Height");
         int length = schematic.getShort("Length");
-        if (width == 0 || height == 0 || length == 0) throw new IOException("Zero size schematic");
+        if (width == 0 || height == 0 || length == 0) {
+            throw new IOException("Zero size schematic");
+        }
         byte[] addBlocks = schematic.getByteArray("AddBlocks");
         byte[] blocksID = schematic.getByteArray("Blocks");
-        if (width * height * length != blocksID.length) throw new IOException("Wrong schematic size");
+        if (width * height * length != blocksID.length) {
+            throw new IOException("Wrong schematic size: " + width * height * length + "/" + blocksID.length);
+        }
         short[] blocks = compose(blocksID, addBlocks);
+
         /* Set flags */
         String path = schematicFile.getPath().toLowerCase().replace("\\", "/").replace("//", "/");
         flags.setString("Method", "Common");
@@ -68,7 +78,7 @@ public class Structure {
         if (path.contains("/water/")) flags.setString("Method", "Water");
         if (path.contains("/underwater/")) flags.setString("Method", "Underwater");
         flags.setInteger("Biome", Biome.detect(blocks).value);
-        if (flags.getString("Method").equalsIgnoreCase("Water") ||
+        if (    flags.getString("Method").equalsIgnoreCase("Water") ||
                 flags.getString("Method").equalsIgnoreCase("Underwater")) {
             flags.setInteger("Biome", Biome.Style.WATER.value);
         }
@@ -76,21 +86,26 @@ public class Structure {
         flags.setShort("Height", (short) height);
         flags.setShort("Length", (short) length);
         flags.setInteger("Lift", getLift(blocks));
+
         /* Generate structure over schematic */
         schematic.setByteArray("Skin", getSkin(blocks).toByteArray());
+
         /* Save flags */
         flagFile.getParentFile().mkdirs();
         FileOutputStream fosFlag = new FileOutputStream(flagFile);
         CompressedStreamTools.writeCompressed(flags, fosFlag);
         fosFlag.close();
+
         /* Save structure */
         structureFile.getParentFile().mkdirs();
         FileOutputStream fosStruct = new FileOutputStream(structureFile);
         CompressedStreamTools.writeCompressed(schematic, fosStruct);
         fosStruct.close();
+
     }
 
-    boolean paste(World world, Posture posture, long seed) throws IOException {
+    void paste(World world, Posture posture, long seed) throws IOException {
+
         /* Load ad paste structure */
         NBTTagCompound structure;
         FileInputStream fis = new FileInputStream(structureFile);
@@ -102,6 +117,7 @@ public class Structure {
         byte[] blocksID = structure.getByteArray("Blocks");
         short[] blocks = compose(blocksID, addBlocks);
         BitSet skin = BitSet.valueOf(structure.getByteArray("Skin"));
+
         /* Prepare tiles */
         Random random = new Random();
         ArrayList<ResourceLocation> lootTables = new ArrayList<ResourceLocation>() {{
@@ -128,6 +144,7 @@ public class Structure {
         if (flags.getString("Biome").equalsIgnoreCase("End")) {
             lootTables.add(LootTableList.CHESTS_END_CITY_TREASURE);
         }
+
         /* Paste */
         int width = posture.getWidth();
         int height = posture.getHeight();
@@ -150,6 +167,7 @@ public class Structure {
                 System.arraycopy(stack, 0, storage[cx][cz], 0, 16);
             }
         }
+
         for (int y = 0, index = 0; y < height; ++y) {
             for (int z = 0; z < length; ++z) {
                 for (int x = 0; x < width ; ++x, ++index) {
@@ -186,7 +204,8 @@ public class Structure {
             }
         }
         world.markBlockRangeForRenderUpdate(posture.getWorldPos(0, 0, 0), posture.getWorldPos(width, height, length));
-        /* Populate */
+
+        /* Populate village */
         if (flags.getString("Method").equalsIgnoreCase("Village")) {
             int count = (int) (1 + Math.cbrt(Math.abs(posture.getWidth() * posture.getLength()))) / 2;
             int maxTries = 16 + count * count;
@@ -205,8 +224,9 @@ public class Structure {
                 --count;
             }
         }
+
         /* Spawn entities */
-        return true;
+
     }
 
     /* Calibrates posture, returns -1 if can't calibrate */
@@ -262,20 +282,30 @@ public class Structure {
         boolean underwater = flags.getString("Method").equalsIgnoreCase("Underwater");
         boolean floating = flags.getString("Method").equalsIgnoreCase("Floating");
         boolean underground = flags.getString("Method").equalsIgnoreCase("Underground");
-         int sy;
+        int sy;
+        DecimalFormat decimal = new DecimalFormat("######0.00");
         if (water) {
-            if (Math.sqrt(variance) > 3.0 || waterHeight < 6.0) {
-                throw new IOException("Rough water");
+            if (Math.sqrt(variance) > 3.0) {
+                throw new IOException("Rough water: " + decimal.format(variance));
+            }
+            if (waterHeight < 6.0) {
+                throw new IOException("Too shallow: " + decimal.format(waterHeight));
             }
             sy = (int) (averageHeight - Math.sqrt(variance));
         } else {
             if (underwater) {
-                if ((Math.sqrt(varianceWater) > height / 2.0 + 2) || (waterHeight + lift < height * 0.35)) {
-                    throw new IOException("Rough bottom");
+                if (Math.sqrt(varianceWater) > height / 2.0 + 2) {
+                    throw new IOException("Rough bottom: " + decimal.format(varianceWater));
+                }
+                if (waterHeight < height * 0.35 && waterHeight + lift < height) {
+                    throw new IOException("Too shallow: " + decimal.format(waterHeight));
                 }
             } else if (!floating && !underground) {
-                if ((Math.sqrt(varianceWater) > height / 8.0 + 2) || waterHeight > 1.5) {
-                    throw new IOException("Rough area");
+                if (Math.sqrt(varianceWater) > height / 8.0 + 2) {
+                    throw new IOException("Rough area: " + decimal.format(varianceWater));
+                }
+                if (waterHeight > 1.5) {
+                    throw new IOException("Too deep: " + decimal.format(waterHeight));
                 }
             }
             sy = (int) (averageHeightWater - Math.sqrt(varianceWater));
@@ -288,12 +318,12 @@ public class Structure {
             sy -= lift;
         }
         if (sy < 4 || sy > 250) {
-            throw new IOException("Abnormal height");
+            throw new IOException("Abnormal height: " + sy);
         }
         return sy;
     }
 
-
+    /* Combine all 8b-blocksID and 8b-addBlocks to 16b-block */
     private short[] compose(byte[] blocksID, byte[] addBlocks) {
         short[] blocks = new short[blocksID.length];
         for (int index = 0; index < blocksID.length; index++) {
@@ -310,6 +340,7 @@ public class Structure {
         return blocks;
     }
 
+    /* Get structure ground level (lift) to dig it down */
     private int getLift(short[] blocks) {
         int width = flags.getShort("Width");
         int height = flags.getShort("Height");
@@ -342,6 +373,7 @@ public class Structure {
         return  Math.max(borderLevel, wholeLevel);
     }
 
+    /* Generate schematic skin as bitset of possible(0) and restricted(1) to spawn blocks */
     private BitSet getSkin(short[] blocks) {
         final byte Y_INC = 1;
         final byte Y_DEC = 32;

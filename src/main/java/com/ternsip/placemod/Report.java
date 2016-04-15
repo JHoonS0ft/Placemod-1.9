@@ -1,6 +1,6 @@
 package com.ternsip.placemod;
 
-
+/* Console message reporter [key = value] */
 public class Report {
 
     String result = "[" + Placemod.MODNAME + " v" + Placemod.VERSION + "]";

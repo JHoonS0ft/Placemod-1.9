@@ -3,9 +3,7 @@ package com.ternsip.placemod;
 import net.minecraft.block.Block;
 import net.minecraft.util.math.BlockPos;
 
-/**
- * Created by TrnMain on 29.03.2016.
- */
+/* Reflects information about cuboid stereometric state in the world. */
 class Posture {
 
     private int posX, posY, posZ;
@@ -59,6 +57,7 @@ class Posture {
         this.endZ = posZ + sizeZ;
     }
 
+    /* Get world position of structure index(x,y,z) block */
     BlockPos getWorldPos(int x, int y, int z) {
         int wx = flipX ? width - x - 1 : x;
         int wy = flipY ? height - y - 1 : y;
@@ -72,6 +71,7 @@ class Posture {
         return new BlockPos(wx + posX, wy + posY, wz + posZ);
     }
 
+    /* Get world metadata of block with metadata */
     int getWorldMeta(Block block, byte meta) {
         Directions.BlockType blockType = Directions.getBlockType(block, meta);
         int mask = Directions.getMask(blockType);

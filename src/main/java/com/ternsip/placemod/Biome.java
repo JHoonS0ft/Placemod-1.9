@@ -4,8 +4,10 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+/* Biome-style determination class */
 class Biome {
 
+    /* Possible biome styles. Must completely cover all biomes */
     enum Style {
 
         COMMON (0x00, "COMMON"),
@@ -25,6 +27,7 @@ class Biome {
             this.name = name;
         }
 
+        /* Biome ID to Biome.Style */
         public static Style valueOf(int value) {
             for (Style sample : Style.values()) {
                 if (sample.value == value) {
@@ -36,19 +39,26 @@ class Biome {
 
     }
 
+    /* Detect Biome.Style by given set of blocks */
     static Style detect(short[] blocks) {
+
+        /* Counts [0..SIZE] of each vanilla blocks */
         double[] counts = new double[256];
         for (short blockID : blocks) {
             if (blockID >= 0 && blockID < 256) {
                 counts[blockID] += 1.0;
             }
         }
+
+        /* Frequency [0..1] of each vanilla block, exclusive air */
         double[] frequency = new double[256];
         double notAir = 1 + blocks.length - counts[0];
         frequency[0] /= counts[0] / blocks.length;
         for (int i = 1; i < 256; ++i) {
             frequency[i] = counts[i] / notAir;
         }
+
+        /* Affective blocks for each Biome.Style, except COMMON */
         Block[] snow = new Block[]{Blocks.snow_layer, Blocks.snow, Blocks.ice};
         Block[] nether = new Block[]{Blocks.netherrack, Blocks.soul_sand, Blocks.nether_brick, Blocks.nether_brick_fence, Blocks.nether_brick_stairs, Blocks.obsidian};
         Block[] sand = new Block[]{Blocks.sand, Blocks.sandstone, Blocks.sandstone_stairs};
@@ -62,16 +72,17 @@ class Biome {
         if (accumulate(mesa, frequency) > 0.25) return  Style.MESA;
         if (accumulate(mushroom, frequency) > 0.1) return  Style.MUSHROOM;
         return  Style.COMMON;
+
     }
 
-    private static double accumulate(Block[] blocks, double[] frequency) {
+    /* Sum of blocks array values */
+    private static double accumulate(Block[] blocks, double[] array) {
         double sum = 0;
         for (Block block : blocks) {
-            sum += frequency[Block.getIdFromBlock(block)];
+            sum += array[Block.getIdFromBlock(block)];
         }
         return sum;
     }
-
 
     private static boolean isBiomeSnow(BiomeGenBase biome) {
         String biomeName = biome.getBiomeName().toLowerCase().replace(" ", "");
@@ -140,6 +151,7 @@ class Biome {
         return biomeName.contains("TheEnd".toLowerCase());
     }
 
+    /* Determine Biome.Style by given BiomeGenBase */
     static Style determine(BiomeGenBase biome) {
         if (isBiomeEnd(biome)) return Style.END;
         if (isBiomeNether(biome)) return Style.NETHER;

@@ -3,13 +3,13 @@
   "modid": "placemod",
   "name": "Placemod",
   "description": "Fast Schematic Spawning System",
-  "version": "${version}",
-  "mcversion": "${mcversion}",
-  "url": "",
+  "version": "",
+  "mcversion": "",
+  "url": "http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/2479524-placemod-fast-schematic-spawning-system",
   "updateUrl": "",
   "authorList": ["Ternsip"],
   "credits": "Ternsip",
-  "logoFile": "",
+  "logoFile": "logo.png",
   "screenshots": [],
   "dependencies": []
 }
