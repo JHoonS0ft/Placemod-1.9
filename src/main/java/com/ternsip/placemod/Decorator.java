@@ -22,15 +22,17 @@ public class Decorator implements IWorldGenerator {
 
     private static Distributor distributor = null;
     private static double density = 0.005; // drop probability per chunk
-    static double ratioA = 1, ratioB = 0.5;
-    static boolean strictMode = false;
-    static boolean[] soil = new boolean[256];
-    static boolean[] overlook = new boolean[256];
-    static boolean[] liquid = new boolean[256];
+    static double ratioA = 1, ratioB = 0.5; // logistic f(x) = 2 / (1 + e ^ (-A * x ^ B)) - 1, default A = 1, B = 0.5
+    static boolean strictMode = false; // prevent floating islands to spawn in common biome additionally
+    static boolean[] soil = new boolean[256]; // ground soil blocks
+    static boolean[] overlook = new boolean[256]; // plants, stuff, web, fire, decorative, etc.
+    static boolean[] liquid = new boolean[256]; // liquid blocks
 
     /* Load/Generate mod settings */
     private static void configure(File file) {
-        new File(file.getParent()).mkdirs();
+        if (new File(file.getParent()).mkdirs()) {
+            new Report().add("CREATE CONFIG", file.getParent());
+        }
         Properties config = new Properties();
         if (file.exists()) {
             try {

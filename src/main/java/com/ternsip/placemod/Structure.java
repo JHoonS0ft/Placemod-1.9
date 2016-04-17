@@ -119,7 +119,7 @@ public class Structure {
         BitSet skin = BitSet.valueOf(structure.getByteArray("Skin"));
 
         /* Prepare tiles */
-        Random random = new Random();
+        Random random = new Random(seed);
         ArrayList<ResourceLocation> lootTables = new ArrayList<ResourceLocation>() {{
             add(LootTableList.CHESTS_ABANDONED_MINESHAFT);
             add(LootTableList.CHESTS_JUNGLE_TEMPLE);
@@ -238,13 +238,20 @@ public class Structure {
         double squareHeightSumWater = 0;
         boolean[] overlook = Decorator.overlook;
         boolean[] liquid = Decorator.liquid;
-        int ex = posture.getEndX();
-        int ez = posture.getEndZ();
+        int sx = posture.getPosX();
+        int sz = posture.getPosZ();
+        int ex = posture.getEndX() - 1;
+        int ez = posture.getEndZ() - 1;
         String dinName = world.provider.getDimensionType().getName();
         boolean abnormal = dinName.equalsIgnoreCase("Nether") || dinName.equalsIgnoreCase("End");
         int startHeight = abnormal ? 64 : 255;
-        for (int wx = posture.getPosX(); wx < ex; ++wx) {
-            for (int wz = posture.getPosZ(); wz < ez; ++wz) {
+        double area = 0;
+        for (int wx = sx; wx <= ex; ++wx) {
+            for (int wz = sz; wz <= ez; ++wz) {
+                if (wx != sx && wx != ex && wz != sz && wz != ez) {
+                    continue;
+                }
+                area++;
                 int hg = startHeight;
                 while (hg > 0) {
                     int blockID = Block.getIdFromBlock(world.getBlockState(new BlockPos(wx, hg, wz)).getBlock());
@@ -268,14 +275,14 @@ public class Structure {
                 squareHeightSumWater += (hg + 1) * (hg + 1);
             }
         }
-        int width = flags.getShort("Width");
         int height = flags.getShort("Height");
-        int length = flags.getShort("Length");
-        double area = width * length;
+        if (area <= 0) {
+            throw new IOException("Incorrect calibration area: " + area);
+        }
+        double variance = area > 1 ? Math.abs((squareHeightSum - (totalHeight * totalHeight) / area) / (area - 1)) : 0;
+        double varianceWater = area > 1 ? Math.abs((squareHeightSumWater - (totalHeightWater * totalHeightWater) / area) / (area - 1)) : 0;
         double averageHeight = totalHeight / area;
-        double variance = Math.abs((squareHeightSum - (totalHeight * totalHeight) / area) / (area - 1));
         double averageHeightWater = totalHeightWater / area;
-        double varianceWater = Math.abs((squareHeightSumWater - (totalHeightWater * totalHeightWater) / area) / (area - 1));
         double waterHeight = averageHeight - averageHeightWater;
         double lift = flags.getInteger("Lift");
         boolean water = flags.getString("Method").equalsIgnoreCase("Water");

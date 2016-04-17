@@ -26,12 +26,6 @@ class Distributor {
                     biomeStyles.put(common_bid, biomeStyles.getOrDefault(common_bid, 0) + 1);
                 }
             }
-            HashMap.Entry<Integer, Integer> maxEntry = null;
-            for (HashMap.Entry<Integer, Integer> entry : biomeStyles.entrySet()) {
-                if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
-                    maxEntry = entry;
-                }
-            }
             /* Put cluster to biomes that have maximal similarity. May be one, two or more */
             int maxValue = Collections.max(biomeStyles.values());
             for (Map.Entry<Integer, Integer> entry : biomeStyles.entrySet()) {
@@ -69,7 +63,7 @@ class Distributor {
                     weight += width * height * length;
                 }
                 /* Logistic smooth saturation function  */
-                /* f(x) = 2 / (1 + e ^ (-A * x ^ B)) - 1, EFAULT A = 1, B = 0.5 */
+                /* f(x) = 2 / (1 + e ^ (-A * x ^ B)) - 1, default A = 1, B = 0.5 */
                 double saturation = 2.0 / (1.0 + Math.exp(-A * Math.pow(weight / averageBlocks, B))) - 1.0;
                 double chance = 1.0 - saturation;
                 cluster.setChance(chance);
